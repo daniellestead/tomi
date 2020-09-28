@@ -8,69 +8,79 @@ on:
 name: Test
 
 jobs:
-  test_and_clippy:
-    name: Test Suite
-    runs-on: ${{ matrix.os }}
+  build:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        toolchain: [stable, nightly]
+        os: [windows-2019, ubuntu-20.04, macos-10.15]
+        exclude:
+          - os: macos-10.15
+            toolchain: nightly
+    runs-on: ${{ matrix.os }}
+    needs: clean
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-      - name: Load cache
-        # See https://github.com/actions/cache/issues/403
-        if: runner.os != 'macOS'
-        uses: actions/cache@v2
+      - uses: actions-rs/toolchain@v1
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
+          toolchain: ${{ matrix.toolchain }}
           override: true
 
-      - name: Install LLVM
-        if: runner.os == 'Windows'
-        run: choco install llvm -y
+      - uses: actions/cache@v2
+        with:
+          path: |
+            target
+          key: ${{ runner.os }}-cargo-check-test-${{ matrix.toolchain }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install alsa
+        run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev
+        if: ${{ runner.os == 'Linux' }}
+
+      - name: Install udev
+        run: sudo apt-get update; sudo apt-get install --no-install-recommends libudev-dev
+        if: ${{ runner.os == 'Linux' }}
+
+      - name: Build
+        run: cargo check
+        env:
+          CARGO_INCREMENTAL: 0
+          RUSTFLAGS: "-C debuginfo=0 -D warnings"
 
       - name: Run tests
-        uses: actions-rs/cargo@v1
+        run: cargo test --workspace
+        if: ${{ runner.os == 'Linux' }}
         env:
-          RUST_BACKTRACE: 1
-        with:
-          command: test
-          args: --all
+          CARGO_INCREMENTAL: 0
+          RUSTFLAGS: "-C debuginfo=0 -D warnings"
 
-      - name: Install clippy
-        if: runner.os == 'Linux'
-        run: rustup component add clippy
-
-      - name: Run clippy
-        if: runner.os == 'Linux'
+      - name: Check wasm
         uses: actions-rs/cargo@v1
         with:
-          command: clippy
-          args: --all -- -D warnings
+          command: check
+          target: wasm32-unknown-unknown
+          override: true
 
-  fmt:
-    name: Rustfmt
+  clean:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+
       - uses: actions-rs/toolchain@v1
         with:
-          profile: minimal
-          toolchain: stable
+          toolchain: nightly
+          components: rustfmt, clippy
           override: true
-      - run: rustup component add rustfmt
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+
+      - name: Install alsa
+        run: sudo apt-get install --no-install-recommends libasound2-dev
+
+      - name: Install udev
+        run: sudo apt-get install --no-install-recommends libudev-dev
+
+      - name: Check the format
+        run: cargo +nightly fmt --all -- --check
+
+      # type complexity must be ignored because we use huge templates for queries
+      # -A clippy::manual-strip: strip_prefix support was added in 1.45. we want to support earlier rust versions
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings -A clippy::type_complexity -A clippy::manual-strip
