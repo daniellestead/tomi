@@ -1,19 +1,14 @@
 use bevy::{
     prelude::*,
-    window::WindowMode
+    render::pass::ClearColor
 };
 
 fn main() {
     App::build()
         .add_resource(WindowDescriptor {
-            title: "TOMI".to_string(),
-            width: 300,
-            height: 300,
-            vsync: true,
-            resizable: false,
-            mode: WindowMode::Fullscreen { use_size: false },
-            ..Default::default()
-        })
+                title: "TOMI".to_string(),
+                ..Default::default()
+            })
         .add_default_plugins()
         .add_resource(Scoreboard { score: 0 })
         .add_resource(ClearColor(Color::rgb(1.0, 1.0, 1.0)))
