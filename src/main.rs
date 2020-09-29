@@ -1,9 +1,22 @@
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    window::WindowMode
+};
 
 fn main() {
     App::build()
+        .add_resource(WindowDescriptor {
+            title: "TOMI".to_string(),
+            width: 300,
+            height: 300,
+            vsync: true,
+            resizable: false,
+            mode: WindowMode::Fullscreen { use_size: false },
+            ..Default::default()
+        })
         .add_default_plugins()
         .add_resource(Scoreboard { score: 0 })
+        .add_resource(ClearColor(Color::rgb(1.0, 1.0, 1.0)))
         .add_startup_system(setup.system())
         .add_system(animate_system.system())
         .add_system(scoreboard_system.system())
@@ -16,12 +29,14 @@ struct Scoreboard {
 
 fn animate_system(
     texture_atlases: Res<Assets<TextureAtlas>>,
+    mut scoreboard: ResMut<Scoreboard>,
     mut query: Query<(&mut Timer, &mut TextureAtlasSprite, &Handle<TextureAtlas>)>,
 ) {
     for (timer, mut sprite, texture_atlas_handle) in &mut query.iter() {
         if timer.finished {
             let texture_atlas = texture_atlases.get(&texture_atlas_handle).unwrap();
             sprite.index = ((sprite.index as usize + 1) % texture_atlas.textures.len()) as u32;
+            scoreboard.score += 1;
         }
     }
 }
@@ -35,7 +50,6 @@ fn scoreboard_system(scoreboard: Res<Scoreboard>, mut query: Query<&mut Text>) {
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut scoreboard: ResMut<Scoreboard>,
     mut textures: ResMut<Assets<Texture>>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
@@ -48,7 +62,6 @@ fn setup(
     let texture = textures.get(&texture_handle).unwrap();
     let texture_atlas = TextureAtlas::from_grid(texture_handle, texture.size, 3, 1);
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
-    scoreboard.score += 1;
     commands
         .spawn(Camera2dComponents::default())
         .spawn(SpriteSheetComponents {
@@ -63,7 +76,7 @@ fn setup(
                 font: asset_server.load("assets/fonts/FiraSans-Bold.ttf").unwrap(),
                 value: "Score:".to_string(),
                 style: TextStyle {
-                    color: Color::rgb_u8(252, 209, 250),
+                    color: Color::rgb(0.2, 0.2, 0.8),
                     font_size: 40.0,
                 },
             },
