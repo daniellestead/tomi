@@ -11,7 +11,7 @@ fn main() {
             })
         .add_default_plugins()
         .add_resource(Scoreboard { score: 0 })
-        .add_resource(ClearColor(Color::rgb(1.0, 1.0, 1.0)))
+        .add_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
         .add_startup_system(setup.system())
         .add_system(animate_system.system())
         .add_system(scoreboard_system.system())
@@ -59,6 +59,7 @@ fn setup(
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
     commands
         .spawn(Camera2dComponents::default())
+        .spawn(UiCameraComponents::default())
         .spawn(SpriteSheetComponents {
             texture_atlas: texture_atlas_handle,
             transform: Transform::from_scale(1.0),
@@ -71,7 +72,7 @@ fn setup(
                 font: asset_server.load("assets/fonts/FiraSans-Bold.ttf").unwrap(),
                 value: "Score:".to_string(),
                 style: TextStyle {
-                    color: Color::rgb(0.2, 0.2, 0.8),
+                    color: Color::rgb_u8(254, 209, 250),
                     font_size: 40.0,
                 },
             },
@@ -87,3 +88,22 @@ fn setup(
             ..Default::default()
         });
 }
+
+// fn greet_people(
+//     time: Res<Time>, mut timer: ResMut<GreetTimer>, _person: &Person, name: &Name) {
+//     timer.0.tick(time.delta_seconds);
+//     if timer.0.finished {
+//         println!("hello {}!", name.0);
+//     }
+// }
+// The solution is to use a Query System instead:
+//
+// fn greet_people(
+//     time: Res<Time>, mut timer: ResMut<GreetTimer>, mut query: Query<(&Person, &Name)>) {
+//     timer.0.tick(time.delta_seconds);
+//     if timer.0.finished {
+//         for (_person, name) in &mut query.iter() {
+//             println!("hello {}!", name.0);
+//         }
+//     }
+// }
