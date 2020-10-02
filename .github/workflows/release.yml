@@ -38,7 +38,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ github.event.upload_url }}
+          upload_url: ${{ github.event.release.upload_url }}
           asset_path: ./target/release/tomi.exe
           asset_name: tomi.exe
           asset_content_type: application/vnd.microsoft.portable-executable
