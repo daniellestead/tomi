@@ -1,0 +1,34 @@
+on:
+  release
+
+name: Release
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-2019]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          override: true
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            target
+          key: ${{ runner.os }}-cargo-check-test-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Store Binary
+        uses: skx/github-action-publish-binaries@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: 'target/release/{tomi,tomi.exe}'
