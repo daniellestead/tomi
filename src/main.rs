@@ -15,11 +15,16 @@ fn main() {
         .add_startup_system(setup.system())
         .add_system(animate_system.system())
         .add_system(scoreboard_system.system())
+        .add_system(movement_system.system())
         .run();
 }
 
 struct Scoreboard {
     score: usize,
+}
+
+struct Tomi {
+    speed: f32,
 }
 
 fn animate_system(
@@ -65,6 +70,8 @@ fn setup(
             transform: Transform::from_scale(1.0),
             ..Default::default()
         })
+        // Tomi
+        .with(Tomi { speed: 500.0 })
         .with(Timer::from_seconds(0.5, true))
         // Scoreboard
         .spawn(TextComponents {
@@ -87,23 +94,35 @@ fn setup(
             },
             ..Default::default()
         });
+
 }
 
-// fn greet_people(
-//     time: Res<Time>, mut timer: ResMut<GreetTimer>, _person: &Person, name: &Name) {
-//     timer.0.tick(time.delta_seconds);
-//     if timer.0.finished {
-//         println!("hello {}!", name.0);
-//     }
-// }
-// The solution is to use a Query System instead:
-//
-// fn greet_people(
-//     time: Res<Time>, mut timer: ResMut<GreetTimer>, mut query: Query<(&Person, &Name)>) {
-//     timer.0.tick(time.delta_seconds);
-//     if timer.0.finished {
-//         for (_person, name) in &mut query.iter() {
-//             println!("hello {}!", name.0);
-//         }
-//     }
-// }
+fn movement_system(
+    time: Res<Time>,
+    keyboard_input: Res<Input<KeyCode>>,
+    mut query: Query<(&Tomi, &mut Transform)>,
+) {
+    for (tomi, mut transform) in &mut query.iter() {
+        let mut xdirection = 0.0;
+        let mut ydirection = 0.0;
+        if keyboard_input.pressed(KeyCode::Left) {
+            xdirection -= 1.0;
+        }
+        if keyboard_input.pressed(KeyCode::Right) {
+            xdirection += 1.0;
+        }
+        if keyboard_input.pressed(KeyCode::Down) {
+            ydirection -= 1.0;
+        }
+
+        if keyboard_input.pressed(KeyCode::Up) {
+            ydirection += 1.0;
+        }
+
+        let translation = transform.translation_mut();
+        // Move horizontally
+        *translation.x_mut() += time.delta_seconds * xdirection * tomi.speed;
+        // Move vertically
+        *translation.y_mut() += time.delta_seconds * ydirection * tomi.speed;
+    }
+}
