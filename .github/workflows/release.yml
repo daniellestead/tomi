@@ -14,14 +14,26 @@ jobs:
 
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: ${{ matrix.toolchain }}
+          toolchain: stable
           override: true
 
-      - uses: actions/cache@v2
+      - name: Load cache
+        uses: actions/cache@v2
         with:
           path: |
+            ~/.cargo/registry
+            ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-check-test-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+
+
+      - name: Install alsa
+        run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev
+        if: ${{ runner.os == 'Linux' }}
+
+      - name: Install udev
+        run: sudo apt-get update; sudo apt-get install --no-install-recommends libudev-dev
+        if: ${{ runner.os == 'Linux' }}
 
       - name: Build
         run: cargo build --release
