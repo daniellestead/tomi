@@ -1,5 +1,6 @@
 on:
-  release
+  release:
+    types: [published]
 
 name: Release
 
@@ -29,9 +30,24 @@ jobs:
       - name: Build
         run: cargo build --release
 
-      - name: Store Binary
-        uses: skx/github-action-publish-binaries@master
+      - name: Store Binary Windows
+        if: ${{ runner.os == 'Windows' }}
+        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          args: 'target/release/{tomi,tomi.exe}'
+          upload_url: ${{ github.event.upload_url }}
+          asset_path: ./target/release/tomi.exe
+          asset_name: tomi.exe
+          asset_content_type: application/vnd.microsoft.portable-executable
+
+      - name: Store Binary Osx
+        if: ${{ runner.os == 'macOS' }}
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.upload_url }}
+          asset_path: ./target/release/tomi
+          asset_name: tomi-osx
+          asset_content_type: application/octet-stream
