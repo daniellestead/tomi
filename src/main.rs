@@ -1,14 +1,11 @@
-use bevy::{
-    prelude::*,
-    render::pass::ClearColor
-};
+use bevy::{prelude::*, render::pass::ClearColor};
 
 fn main() {
     App::build()
         .add_resource(WindowDescriptor {
-                title: "TOMI".to_string(),
-                ..Default::default()
-            })
+            title: "TOMI".to_string(),
+            ..Default::default()
+        })
         .add_default_plugins()
         // .add_resource(Scoreboard { score: 0 })
         .add_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
@@ -69,8 +66,8 @@ fn setup(
         .spawn(UiCameraComponents::default())
         // Tomi
         .spawn(SpriteComponents {
-                     material: materials.add(texture_handle.into()),
-                     ..Default::default()
+            material: materials.add(texture_handle.into()),
+            ..Default::default()
         })
         // .spawn(SpriteSheetComponents {
         //     texture_atlas: texture_atlas_handle,
@@ -78,29 +75,28 @@ fn setup(
         //     ..Default::default()
         // })
         .with(Tomi { speed: 500.0 });
-        // .with(Timer::from_seconds(0.5, true))
-        // Scoreboard
-        // .spawn(TextComponents {
-        //     text: Text {
-        //         font: asset_server.load("assets/fonts/FiraSans-Bold.ttf").unwrap(),
-        //         value: "Score:".to_string(),
-        //         style: TextStyle {
-        //             color: Color::rgb_u8(254, 209, 250),
-        //             font_size: 40.0,
-        //         },
-        //     },
-        //     style: Style {
-        //         position_type: PositionType::Absolute,
-        //         position: Rect {
-        //             top: Val::Px(5.0),
-        //             left: Val::Px(5.0),
-        //             ..Default::default()
-        //         },
-        //         ..Default::default()
-        //     },
-        //     ..Default::default()
-        // });
-
+    // .with(Timer::from_seconds(0.5, true))
+    // Scoreboard
+    // .spawn(TextComponents {
+    //     text: Text {
+    //         font: asset_server.load("assets/fonts/FiraSans-Bold.ttf").unwrap(),
+    //         value: "Score:".to_string(),
+    //         style: TextStyle {
+    //             color: Color::rgb_u8(254, 209, 250),
+    //             font_size: 40.0,
+    //         },
+    //     },
+    //     style: Style {
+    //         position_type: PositionType::Absolute,
+    //         position: Rect {
+    //             top: Val::Px(5.0),
+    //             left: Val::Px(5.0),
+    //             ..Default::default()
+    //         },
+    //         ..Default::default()
+    //     },
+    //     ..Default::default()
+    // });
 }
 
 fn movement_system(
