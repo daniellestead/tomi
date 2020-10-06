@@ -7,52 +7,42 @@ fn main() {
             ..Default::default()
         })
         .add_default_plugins()
-        // .add_resource(Scoreboard { score: 0 })
         .add_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
         .add_startup_system(setup.system())
-        // .add_system(animate_system.system())
-        // .add_system(scoreboard_system.system())
-        //.add_system(movement_system.system())
         .add_system(player_movement.system())
+        .add_system(ai_movement.system())
+        .add_system(movement.system())
+        .add_system(process_movable_tick.system())
         .run();
 }
 
-// struct Scoreboard {
-//     score: usize,
-// }
+// Components
 
-//
-
-//
-//
-// .with(Tomi { speed: 500.0, movement: MovementState::Stationary });
-// enum MovementState {
-//   Stationary,
-//   Walking(direction: Direction),
-//   Dead
-// }
-// enum Direction {
-//   Up,
-//   Down,
-//   Left,
-//   Right
-// }
-//
-// .with(Tomi { speed: 500.0, movement: MovementState::Stationary });
-//
-
-// #[derive(Default)]
-// struct Movement {
-//     speed: f32,
-// }
-struct Movement {
+/// Component for any movable
+#[derive(Copy, Clone)]
+struct Movable {
     speed: f32,
     movement: MovementState,
 }
+
+impl Movable {
+    pub fn with_speed(speed: f32) -> Movable {
+        Movable {
+            speed,
+            movement: MovementState::Stationary,
+        }
+    }
+}
+
+/// The current state of the any movable
+#[derive(Copy, Clone)]
 enum MovementState {
     Stationary,
     Walking(Direction),
 }
+
+/// An enum representing a direction within the game
+#[derive(Copy, Clone)]
 enum Direction {
     Up,
     Down,
@@ -60,50 +50,26 @@ enum Direction {
     Right,
 }
 
-impl Default for Movement {
-    fn default() -> Self {
-        Movement::Stationary
-    }
-}
+/// Marker Component with no state, only used to mark
+/// which movable to update from user input
+#[derive(Copy, Clone)]
+struct PlayerMovable {}
 
-// fn animate_system(
-//     texture_atlases: Res<Assets<TextureAtlas>>,
-//     mut scoreboard: ResMut<Scoreboard>,
-//     mut query: Query<(&mut Timer, &mut TextureAtlasSprite, &Handle<TextureAtlas>)>,
-// ) {
-//     for (timer, mut sprite, texture_atlas_handle) in &mut query.iter() {
-//         if timer.finished {
-//             let texture_atlas = texture_atlases.get(&texture_atlas_handle).unwrap();
-//             sprite.index = ((sprite.index as usize + 1) % texture_atlas.textures.len()) as u32;
-//             scoreboard.score += 1;
-//         }
-//     }
-// }
+/// Marker Component with no state, only used to mark
+/// which movable to update from user input
+#[derive(Copy, Clone)]
+struct AiMovable {}
 
-// fn scoreboard_system(scoreboard: Res<Scoreboard>, mut query: Query<&mut Text>) {
-//     for mut text in &mut query.iter() {
-//         text.value = format!("Score: {}", scoreboard.score);
-//     }
-// }
+// Systems
 
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    // mut textures: ResMut<Assets<Texture>>,
-    // mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    // let texture_handle = asset_server
-    //     .load_sync(
-    //         &mut textures,
-    //         "assets/blow_kiss.png",
-    //     )
-    //     .unwrap();
     let texture_handle = asset_server.load("assets/tomi.png").unwrap();
-    // let texture = textures.get(&texture_handle).unwrap();
-    // let texture_atlas = TextureAtlas::from_grid(texture_handle, texture.size, 3, 1);
-    // let texture_atlas_handle = texture_atlases.add(texture_atlas);
     commands
+        // Cameras
         .spawn(Camera2dComponents::default())
         .spawn(UiCameraComponents::default())
         // Tomi
@@ -111,69 +77,77 @@ fn setup(
             material: materials.add(texture_handle.into()),
             ..Default::default()
         })
-        // .spawn(SpriteSheetComponents {
-        //     texture_atlas: texture_atlas_handle,
-        //     transform: Transform::from_scale(1.0),
-        //     ..Default::default()
-        // })
-        .with(Movement::default());
-    // .with(Timer::from_seconds(0.5, true))
-    // Scoreboard
-    // .spawn(TextComponents {
-    //     text: Text {
-    //         font: asset_server.load("assets/fonts/FiraSans-Bold.ttf").unwrap(),
-    //         value: "Score:".to_string(),
-    //         style: TextStyle {
-    //             color: Color::rgb_u8(254, 209, 250),
-    //             font_size: 40.0,
-    //         },
-    //     },
-    //     style: Style {
-    //         position_type: PositionType::Absolute,
-    //         position: Rect {
-    //             top: Val::Px(5.0),
-    //             left: Val::Px(5.0),
-    //             ..Default::default()
-    //         },
-    //         ..Default::default()
-    //     },
-    //     ..Default::default()
-    // });
+        .with(Movable::with_speed(300.0))
+        .with(PlayerMovable {})
+        .with(Timer::from_seconds(0.5, true))
+        // Robot Tomi
+        .spawn(SpriteComponents {
+            material: materials.add(texture_handle.into()),
+            transform: Transform::from_translation(Vec3::new(150.0, -100.0, 0.0)),
+            ..Default::default()
+        })
+        .with(Movable::with_speed(200.0))
+        .with(AiMovable {})
+        .with(Timer::from_seconds(2.0, true));
 }
 
+/// Updates Movable based on keyboard input
 fn player_movement(
-    // Reads in from the keyboard and updates the MovementState
-    time: Res<Time>,
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<(&Movement, &mut Transform)>,
+    mut query: Query<(&PlayerMovable, &mut Movable)>,
 ) {
-    for (movement, mut transform) in &mut query.iter() {
-        let mut xdirection = 0.0;
-        let mut ydirection = 0.0;
-        if keyboard_input.pressed(KeyCode::Left) {
-            xdirection -= 1.0;
-        }
-        if keyboard_input.pressed(KeyCode::Right) {
-            xdirection += 1.0;
-        }
-        if keyboard_input.pressed(KeyCode::Down) {
-            ydirection -= 1.0;
-        }
-
-        if keyboard_input.pressed(KeyCode::Up) {
-            ydirection += 1.0;
-        }
-
-        let translation = transform.translation_mut();
-        // Move horizontally
-        *translation.x_mut() += time.delta_seconds * xdirection * movement.speed;
-        // Move vertically
-        *translation.y_mut() += time.delta_seconds * ydirection * movement.speed;
+    for (_, mut movement) in &mut query.iter() {
+        movement.movement = if keyboard_input.pressed(KeyCode::Left) {
+            MovementState::Walking(Direction::Left)
+        } else if keyboard_input.pressed(KeyCode::Right) {
+            MovementState::Walking(Direction::Right)
+        } else if keyboard_input.pressed(KeyCode::Down) {
+            MovementState::Walking(Direction::Down)
+        } else if keyboard_input.pressed(KeyCode::Up) {
+            MovementState::Walking(Direction::Up)
+        } else {
+            MovementState::Stationary
+        };
     }
 }
 
-// fn movement_system(
-//     // Updates the position based on the current MovementState
-// ) {
-//
-// }
+/// Updates an AI movable
+fn ai_movement(mut query: Query<(&AiMovable, &Timer, &mut Movable)>) {
+    for (_, timer, mut movement) in &mut query.iter() {
+        if timer.finished {
+            movement.movement = if let MovementState::Walking(Direction::Left) = movement.movement {
+                MovementState::Walking(Direction::Right)
+            } else {
+                MovementState::Walking(Direction::Left)
+            }
+        }
+    }
+}
+
+/// Updates on screen position based on the Movable
+fn movement(time: Res<Time>, mut query: Query<(&Movable, &mut Transform)>) {
+    for (movable, mut transform) in &mut query.iter() {
+        if let MovementState::Walking(direction) = movable.movement {
+            let translation = transform.translation_mut();
+            let distance = time.delta_seconds * movable.speed;
+            match direction {
+                Direction::Left => *translation.x_mut() -= distance,
+                Direction::Right => *translation.x_mut() += distance,
+                Direction::Up => *translation.y_mut() += distance,
+                Direction::Down => *translation.y_mut() -= distance,
+            }
+        }
+    }
+}
+
+/// Processes a timer tick for a movable, ie updates sprites for animations etc
+fn process_movable_tick(mut query: Query<(&Timer, &Movable)>) {
+    for (timer, movable) in &mut query.iter() {
+        if timer.finished {
+            if let MovementState::Walking(_) = movable.movement {
+                // Audio doesn't seem to work properly yet :(
+                //audio_output.play(sounds.step);
+            }
+        }
+    }
+}
