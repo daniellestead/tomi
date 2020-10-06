@@ -10,6 +10,7 @@ fn main() {
         .add_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
         .add_startup_system(setup.system())
         .add_system(player_movement.system())
+        .add_system(ai_movement.system())
         .add_system(movement.system())
         .add_system(process_movable_tick.system())
         .run();
@@ -54,6 +55,11 @@ enum Direction {
 #[derive(Copy, Clone)]
 struct PlayerMovable {}
 
+/// Marker Component with no state, only used to mark
+/// which movable to update from user input
+#[derive(Copy, Clone)]
+struct AiMovable {}
+
 // Systems
 
 fn setup(
@@ -73,7 +79,16 @@ fn setup(
         })
         .with(Movable::with_speed(300.0))
         .with(PlayerMovable {})
-        .with(Timer::from_seconds(0.5, true));
+        .with(Timer::from_seconds(0.5, true))
+        // Robot Tomi
+        .spawn(SpriteComponents {
+            material: materials.add(texture_handle.into()),
+            transform: Transform::from_translation(Vec3::new(150.0, -100.0, 0.0)),
+            ..Default::default()
+        })
+        .with(Movable::with_speed(200.0))
+        .with(AiMovable {})
+        .with(Timer::from_seconds(2.0, true));
 }
 
 /// Updates Movable based on keyboard input
@@ -93,6 +108,19 @@ fn player_movement(
         } else {
             MovementState::Stationary
         };
+    }
+}
+
+/// Updates an AI movable
+fn ai_movement(mut query: Query<(&AiMovable, &Timer, &mut Movable)>) {
+    for (_, timer, mut movement) in &mut query.iter() {
+        if timer.finished {
+            movement.movement = if let MovementState::Walking(Direction::Left) = movement.movement {
+                MovementState::Walking(Direction::Right)
+            } else {
+                MovementState::Walking(Direction::Left)
+            }
+        }
     }
 }
 
