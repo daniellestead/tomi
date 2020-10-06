@@ -12,7 +12,8 @@ fn main() {
         .add_startup_system(setup.system())
         // .add_system(animate_system.system())
         // .add_system(scoreboard_system.system())
-        .add_system(movement_system.system())
+        //.add_system(movement_system.system())
+        .add_system(player_movement.system())
         .run();
 }
 
@@ -20,8 +21,49 @@ fn main() {
 //     score: usize,
 // }
 
-struct Tomi {
+//
+
+//
+//
+// .with(Tomi { speed: 500.0, movement: MovementState::Stationary });
+// enum MovementState {
+//   Stationary,
+//   Walking(direction: Direction),
+//   Dead
+// }
+// enum Direction {
+//   Up,
+//   Down,
+//   Left,
+//   Right
+// }
+//
+// .with(Tomi { speed: 500.0, movement: MovementState::Stationary });
+//
+
+// #[derive(Default)]
+// struct Movement {
+//     speed: f32,
+// }
+struct Movement {
     speed: f32,
+    movement: MovementState,
+}
+enum MovementState {
+    Stationary,
+    Walking(Direction),
+}
+enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+impl Default for Movement {
+    fn default() -> Self {
+        Movement::Stationary
+    }
 }
 
 // fn animate_system(
@@ -74,7 +116,7 @@ fn setup(
         //     transform: Transform::from_scale(1.0),
         //     ..Default::default()
         // })
-        .with(Tomi { speed: 500.0 });
+        .with(Movement::default());
     // .with(Timer::from_seconds(0.5, true))
     // Scoreboard
     // .spawn(TextComponents {
@@ -99,12 +141,13 @@ fn setup(
     // });
 }
 
-fn movement_system(
+fn player_movement(
+    // Reads in from the keyboard and updates the MovementState
     time: Res<Time>,
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<(&Tomi, &mut Transform)>,
+    mut query: Query<(&Movement, &mut Transform)>,
 ) {
-    for (tomi, mut transform) in &mut query.iter() {
+    for (movement, mut transform) in &mut query.iter() {
         let mut xdirection = 0.0;
         let mut ydirection = 0.0;
         if keyboard_input.pressed(KeyCode::Left) {
@@ -123,8 +166,14 @@ fn movement_system(
 
         let translation = transform.translation_mut();
         // Move horizontally
-        *translation.x_mut() += time.delta_seconds * xdirection * tomi.speed;
+        *translation.x_mut() += time.delta_seconds * xdirection * movement.speed;
         // Move vertically
-        *translation.y_mut() += time.delta_seconds * ydirection * tomi.speed;
+        *translation.y_mut() += time.delta_seconds * ydirection * movement.speed;
     }
 }
+
+// fn movement_system(
+//     // Updates the position based on the current MovementState
+// ) {
+//
+// }
