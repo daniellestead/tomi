@@ -11,6 +11,7 @@ fn main() {
         .add_startup_system(setup.system())
         .add_system(player_movement.system())
         .add_system(movement.system())
+        .add_system(process_movable_tick.system())
         .run();
 }
 
@@ -27,7 +28,7 @@ impl Movable {
     pub fn with_speed(speed: f32) -> Movable {
         Movable {
             speed,
-            movement: MovementState::Stationary
+            movement: MovementState::Stationary,
         }
     }
 }
@@ -71,7 +72,8 @@ fn setup(
             ..Default::default()
         })
         .with(Movable::with_speed(300.0))
-        .with(PlayerMovable {});
+        .with(PlayerMovable {})
+        .with(Timer::from_seconds(0.5, true));
 }
 
 /// Updates Movable based on keyboard input
@@ -105,6 +107,18 @@ fn movement(time: Res<Time>, mut query: Query<(&Movable, &mut Transform)>) {
                 Direction::Right => *translation.x_mut() += distance,
                 Direction::Up => *translation.y_mut() += distance,
                 Direction::Down => *translation.y_mut() -= distance,
+            }
+        }
+    }
+}
+
+/// Processes a timer tick for a movable, ie updates sprites for animations etc
+fn process_movable_tick(mut query: Query<(&Timer, &Movable)>) {
+    for (timer, movable) in &mut query.iter() {
+        if timer.finished {
+            if let MovementState::Walking(_) = movable.movement {
+                // Audio doesn't seem to work properly yet :(
+                //audio_output.play(sounds.step);
             }
         }
     }
