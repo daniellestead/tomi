@@ -23,6 +23,7 @@ fn main() {
 struct Movable {
     speed: f32,
     movement: MovementState,
+//    frame: usize
 }
 
 impl Movable {
@@ -30,6 +31,7 @@ impl Movable {
         Movable {
             speed,
             movement: MovementState::Stationary,
+//            frame: 0
         }
     }
 }
@@ -65,24 +67,36 @@ struct AiMovable {}
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
+    mut textures: ResMut<Assets<Texture>>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let texture_handle = asset_server.load("assets/tomi.png").unwrap();
+    let ai_texture_handle = asset_server.load("assets/tomi_stationary.png").unwrap();
+    let texture_handle = asset_server
+        .load_sync(
+            &mut textures,
+            "assets/tomi_walking.png",
+        )
+        .unwrap();
+    let texture = textures.get(&texture_handle).unwrap();
+    let texture_atlas = TextureAtlas::from_grid(texture_handle, texture.size, 4, 1);
+    let texture_atlas_handle = texture_atlases.add(texture_atlas);
     commands
         // Cameras
         .spawn(Camera2dComponents::default())
         .spawn(UiCameraComponents::default())
         // Tomi
-        .spawn(SpriteComponents {
-            material: materials.add(texture_handle.into()),
+        .spawn(SpriteSheetComponents {
+            texture_atlas: texture_atlas_handle,
+            transform: Transform::from_scale(1.0),
             ..Default::default()
         })
         .with(Movable::with_speed(300.0))
         .with(PlayerMovable {})
-        .with(Timer::from_seconds(0.5, true))
+        .with(Timer::from_seconds(0.3, true))
         // Robot Tomi
         .spawn(SpriteComponents {
-            material: materials.add(texture_handle.into()),
+            material: materials.add(ai_texture_handle.into()),
             transform: Transform::from_translation(Vec3::new(150.0, -100.0, 0.0)),
             ..Default::default()
         })
@@ -141,12 +155,17 @@ fn movement(time: Res<Time>, mut query: Query<(&Movable, &mut Transform)>) {
 }
 
 /// Processes a timer tick for a movable, ie updates sprites for animations etc
-fn process_movable_tick(mut query: Query<(&Timer, &Movable)>) {
-    for (timer, movable) in &mut query.iter() {
+fn process_movable_tick(
+    texture_atlases: Res<Assets<TextureAtlas>>,
+    mut query: Query<(&Timer, &Movable, &mut TextureAtlasSprite, &Handle<TextureAtlas>)>,
+) {
+    for (timer, movable, mut sprite, texture_atlas_handle) in &mut query.iter() {
         if timer.finished {
             if let MovementState::Walking(_) = movable.movement {
                 // Audio doesn't seem to work properly yet :(
                 //audio_output.play(sounds.step);
+                let texture_atlas = texture_atlases.get(&texture_atlas_handle).unwrap();
+                sprite.index = ((sprite.index as usize + 1) % texture_atlas.textures.len()) as u32;
             }
         }
     }
