@@ -23,7 +23,7 @@ fn main() {
 struct Movable {
     speed: f32,
     movement: MovementState,
-//    frame: usize
+    //    frame: usize
 }
 
 impl Movable {
@@ -31,7 +31,7 @@ impl Movable {
         Movable {
             speed,
             movement: MovementState::Stationary,
-//            frame: 0
+            //            frame: 0
         }
     }
 }
@@ -73,10 +73,7 @@ fn setup(
 ) {
     let ai_texture_handle = asset_server.load("assets/tomi_stationary.png").unwrap();
     let texture_handle = asset_server
-        .load_sync(
-            &mut textures,
-            "assets/tomi_walking.png",
-        )
+        .load_sync(&mut textures, "assets/tomi_walking.png")
         .unwrap();
     let texture = textures.get(&texture_handle).unwrap();
     let texture_atlas = TextureAtlas::from_grid(texture_handle, texture.size, 4, 1);
@@ -157,7 +154,12 @@ fn movement(time: Res<Time>, mut query: Query<(&Movable, &mut Transform)>) {
 /// Processes a timer tick for a movable, ie updates sprites for animations etc
 fn process_movable_tick(
     texture_atlases: Res<Assets<TextureAtlas>>,
-    mut query: Query<(&Timer, &Movable, &mut TextureAtlasSprite, &Handle<TextureAtlas>)>,
+    mut query: Query<(
+        &Timer,
+        &Movable,
+        &mut TextureAtlasSprite,
+        &Handle<TextureAtlas>,
+    )>,
 ) {
     for (timer, movable, mut sprite, texture_atlas_handle) in &mut query.iter() {
         if timer.finished {
