@@ -154,6 +154,8 @@ fn movement(time: Res<Time>, mut query: Query<(&Movable, &mut Transform)>) {
 /// Processes a timer tick for a movable, ie updates sprites for animations etc
 fn process_movable_tick(
     texture_atlases: Res<Assets<TextureAtlas>>,
+    audio_output: Res<AudioOutput>,
+    asset_server: Res<AssetServer>,
     mut query: Query<(
         &Timer,
         &Movable,
@@ -164,8 +166,8 @@ fn process_movable_tick(
     for (timer, movable, mut sprite, texture_atlas_handle) in &mut query.iter() {
         if timer.finished {
             if let MovementState::Walking(_) = movable.movement {
-                // Audio doesn't seem to work properly yet :(
-                //audio_output.play(sounds.step);
+                let step_sound = asset_server.load("assets/sounds/step.mp3").unwrap();
+                audio_output.play(step_sound);
                 let texture_atlas = texture_atlases.get(&texture_atlas_handle).unwrap();
                 sprite.index = ((sprite.index as usize + 1) % texture_atlas.textures.len()) as u32;
             }
