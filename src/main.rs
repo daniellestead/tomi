@@ -166,9 +166,7 @@ fn process_movable_tick(
     for (timer, movable, mut sprite, texture_atlas_handle) in &mut query.iter() {
         if timer.finished {
             if let MovementState::Walking(_) = movable.movement {
-                let step = asset_server
-                    .load("assets/sounds/step.mp3")
-                    .unwrap();
+                let step = asset_server.load("assets/sounds/step.mp3").unwrap();
                 audio_output.play(step);
                 let texture_atlas = texture_atlases.get(&texture_atlas_handle).unwrap();
                 sprite.index = ((sprite.index as usize + 1) % texture_atlas.textures.len()) as u32;
