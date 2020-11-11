@@ -6,9 +6,9 @@ fn main() {
             title: "TOMI".to_string(),
             ..Default::default()
         })
-        .add_default_plugins()
-        .add_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
         .add_startup_system(setup.system())
+        .add_plugins(DefaultPlugins)
+        .add_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
         .add_system(player_movement.system())
         .add_system(ai_movement.system())
         .add_system(movement.system())
@@ -67,16 +67,12 @@ struct AiMovable {}
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut textures: ResMut<Assets<Texture>>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let ai_texture_handle = asset_server.load("assets/tomi_stationary.png").unwrap();
-    let texture_handle = asset_server
-        .load_sync(&mut textures, "assets/tomi_walking.png")
-        .unwrap();
-    let texture = textures.get(&texture_handle).unwrap();
-    let texture_atlas = TextureAtlas::from_grid(texture_handle, texture.size, 4, 1);
+    let ai_texture_handle = asset_server.load("tomi_stationary.png");
+    let texture_handle = asset_server.load("tomi_walking.png");
+    let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(24.0, 24.0), 4, 1);
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
     commands
         // Cameras
@@ -85,7 +81,7 @@ fn setup(
         // Tomi
         .spawn(SpriteSheetComponents {
             texture_atlas: texture_atlas_handle,
-            transform: Transform::from_scale(2.0),
+            transform: Transform::from_scale(Vec3::splat(4.0)),
             ..Default::default()
         })
         .with(Movable::with_speed(300.0))
@@ -107,7 +103,7 @@ fn player_movement(
     keyboard_input: Res<Input<KeyCode>>,
     mut query: Query<(&PlayerMovable, &mut Movable)>,
 ) {
-    for (_, mut movement) in &mut query.iter() {
+    for (_, mut movement) in &mut query.iter_mut() {
         movement.movement = if keyboard_input.pressed(KeyCode::Left) {
             MovementState::Walking(Direction::Left)
         } else if keyboard_input.pressed(KeyCode::Right) {
@@ -124,7 +120,7 @@ fn player_movement(
 
 /// Updates an AI movable
 fn ai_movement(mut query: Query<(&AiMovable, &Timer, &mut Movable)>) {
-    for (_, timer, mut movement) in &mut query.iter() {
+    for (_, timer, mut movement) in &mut query.iter_mut() {
         if timer.finished {
             movement.movement = if let MovementState::Walking(Direction::Left) = movement.movement {
                 MovementState::Walking(Direction::Right)
@@ -137,9 +133,9 @@ fn ai_movement(mut query: Query<(&AiMovable, &Timer, &mut Movable)>) {
 
 /// Updates on screen position based on the Movable
 fn movement(time: Res<Time>, mut query: Query<(&Movable, &mut Transform)>) {
-    for (movable, mut transform) in &mut query.iter() {
+    for (movable, mut transform) in &mut query.iter_mut() {
         if let MovementState::Walking(direction) = movable.movement {
-            let translation = transform.translation_mut();
+            let translation = &mut transform.translation;
             let distance = time.delta_seconds * movable.speed;
             match direction {
                 Direction::Left => *translation.x_mut() -= distance,
@@ -153,8 +149,8 @@ fn movement(time: Res<Time>, mut query: Query<(&Movable, &mut Transform)>) {
 
 /// Processes a timer tick for a movable, ie updates sprites for animations etc
 fn process_movable_tick(
-    texture_atlases: Res<Assets<TextureAtlas>>,
-    audio_output: Res<AudioOutput>,
+    texture_atlases: ResMut<Assets<TextureAtlas>>,
+    audio_output: Res<Audio>,
     asset_server: Res<AssetServer>,
     mut query: Query<(
         &Timer,
@@ -163,12 +159,12 @@ fn process_movable_tick(
         &Handle<TextureAtlas>,
     )>,
 ) {
-    for (timer, movable, mut sprite, texture_atlas_handle) in &mut query.iter() {
+    for (timer, movable, mut sprite, texture_atlas_handle) in &mut query.iter_mut() {
         if timer.finished {
             if let MovementState::Walking(_) = movable.movement {
-                let step = asset_server.load("assets/sounds/step.mp3").unwrap();
+                let step = asset_server.load("sounds/step.mp3");
                 audio_output.play(step);
-                let texture_atlas = texture_atlases.get(&texture_atlas_handle).unwrap();
+                let texture_atlas = texture_atlases.get(texture_atlas_handle).unwrap();
                 sprite.index = ((sprite.index as usize + 1) % texture_atlas.textures.len()) as u32;
             }
         }
